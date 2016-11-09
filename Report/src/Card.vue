@@ -10,7 +10,7 @@
             <div style="padding: 14px;">
               <h2>{{o.name}}</h2>
               <div class="bottom clearfix">
-                <el-button type="primary" class="button" @click.native="gotoTask(o.id)">查看任务</el-button>
+                <el-button type="primary" class="button" @click.native="gotoTask(o.id)">查看报告</el-button>
               </div>
             </div>
           </el-col>
@@ -23,17 +23,29 @@
 <script>
 export default {
   data() {
+    console.log('data() is ready');
     return {
-      cards: [
-        {id : 0, name : "Task0"},
-        {id : 1, name : "Task1"},
-        {id : 2, name : "Task2"},
-        {id : 3, name : "Task3"}]
+      cards: []
+       // {id:0, name:"/shiro/GitProject/train/cnn/lab2/report", path:"/home/shiro/GitProject/train/cnn/lab2/report", symbolic:false},
+       // {id:1, name:"/shiro/GitProject/train/cnn/lab1/report", path:"/home/shiro/GitProject/train/cnn/lab1/report", symbolic:false},
+       // {id:2, name:"/GitProject/train/cnn/latest/report", path:"/home/shiro/GitProject/train/cnn/latest/report", symbolic:false}]
     }
 
   },
 
+  mounted() {
+    console.log('mounted() is ready');
+    this.getDatas();
+  },
+
   methods: {
+    getDatas() {
+      this.$http.get("/lab").then(function(response){
+        this.cards = JSON.parse(response.data)
+        console.log(cards);
+      });
+    },
+
     gotoTask(index) {
       // router.push('/task/index')
     }
