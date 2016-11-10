@@ -2,10 +2,10 @@
   <div id="app">
     <section class="todoapp">
       <header class="header">
-        <h1>todos</h1>
+        <h1>tasks</h1>
         <input class="new-todo"
           autofocus autocomplete="off"
-          placeholder="What needs to be done?"
+          placeholder="What task needs to be found?"
           v-model="newTodo"
           @keyup.enter="addTodo">
       </header>
@@ -46,8 +46,8 @@
     </section>
     <footer class="info">
       <p>Double-click to edit a todo</p>
-      <p>Written by <a href="http://evanyou.me">Evan You</a></p>
-      <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+      <p>Written by <a href="http://evanyou.me">Wenxiao Chen</a></p>
+      <p>Part of <a href="http://todomvc.com">Opprentice</a></p>
     </footer>
   </div>
 </template>
@@ -101,6 +101,17 @@
 
     // watch todos change for localStorage persistence
     watch: {
+      '$route' (to, from) {
+        console.log(to);
+        console.log(from);
+        var path = to.path.replace(/\//, '');
+        if (filters[path]) {
+          this.$set(this, 'visibility', path)
+        } else {
+          this.$set(this, 'visibility', 'all')
+        }
+      },
+
       todos: {
         handler: function (todos) {
           todoStorage.save(todos)
