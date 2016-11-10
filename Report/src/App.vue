@@ -18,11 +18,22 @@
             <div class="view">
               <input class="toggle" type="checkbox" v-model="todo.completed">
               <label @dblclick="editTodo(todo)">
-                <span style="float: left" class="caption">{{ todo.title }}</span>
-                <el-tag style="float: right; margin-left: 5px" v-for="tag, tagIndex in todo.tags" :closable="true" type='success' :key='tag' :close-transitino='true' @close='closeTag(todo, tagIndex)'>
-                  {{tag}}
-                </el-tag>
-                <div style="clear:both;"></div>
+                <el-row>
+                  <el-col :span="8" class="caption">
+                    <div style="margin: auto 0">
+                      <div style="font-size: 40px">{{todo.title}}</div>
+                      <div style="font-size: 10px">{{todo.date}}</div>
+                    </div>
+                  </el-col>
+
+                  <el-col :span="16">
+                    <div style="padding: 20px 0;">
+                      <el-tag style="float: right; margin: auto 0 auto 5px;" v-for="tag, tagIndex in todo.tags" :closable="true" type='success' :key='tag' :close-transitino='true' @close='closeTag(todo, tagIndex)'>
+                        {{tag}}
+                      </el-tag>
+                    </div>
+                  </el-col>
+                </el-row>
               </label>
               <button class="destroy" @click="gotoDetail(todo)"><i class="el-icon-share"></i></button>
             </div>
@@ -65,12 +76,20 @@
     fetch: function (app) {
       return app.$http.get('/lab').then(function(res){
         app.todos = JSON.parse(res.data);
+        for (var i in app.todos) {
+          var todo = app.todos[i];
+          todo.title = todo.path.substr(todo.root.length + 1, (todo.path.length - todo.date.length - 1) - (todo.root.length + 1))
+        }
         todoStorage.uid = app.todos.length
       }, function(res) {
-        app.todos = [{id : 0, title : 'shiro', completed: false, tags: ['latest'], path : 'shiro/latest'}, 
-                     {id : 1, title : 'shana', completed: false, tags: ['wonderful'], path : 'shiro/wonderful'}, 
-                     {id : 2, title : 'monoka', completed: false, tags: ['cnn'], path : 'shiro/cnn'}, 
-                     {id : 3, title : 'tiger', completed: false, tags: ['lstm'], path : 'shiro/lstm'}];
+        app.todos = [{id : 0, date : '2010301231', root: 'shiro', completed: false, tags: ['latest'], path : 'shiro/cnn/2010301231'}, 
+                     {id : 1, date : '20103012313123', root: 'shiro', completed: false, tags: ['wonderful'], path : 'shiro/lstm/20103012313123'}, 
+                     {id : 2, date : '20103012313123123123', root: 'shiro', completed: false, tags: ['cnn'], path : 'shiro/dnn/20103012313123123123'}, 
+                     {id : 3, date : '123', root: 'shiro', completed: false, tags: ['lstm'], path : 'shiro/auto/123'}];
+        for (var i in app.todos) {
+          var todo = app.todos[i];
+          todo.title = todo.path.substr(todo.root.length + 1, (todo.path.length - todo.date.length - 1) - (todo.root.length + 1))
+        }
         todoStorage.uid = app.todos.length
       });
     },
@@ -101,7 +120,7 @@
       var title = search.split(':')[0];
       var tag = search.split(':')[1];
       return todos.filter(function(todo) {
-        if (todo.title.indexOf(title) >= 0) {
+        if (todo.path.indexOf(title) >= 0) {
           if (tag) {
             for (var t in todo.tags) {
               if (todo.tags[t].indexOf(tag) >= 0)

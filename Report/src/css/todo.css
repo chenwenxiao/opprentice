@@ -88,7 +88,7 @@ body {
 	font-size: 24px;
 	font-family: inherit;
 	font-weight: inherit;
-	line-height: 1.4em;
+	line-height: 2.8em;
 	border: 0;
 	color: inherit;
 	padding: 6px;
@@ -216,12 +216,13 @@ label[for='toggle-all'] {
 	right: 10px;
 	bottom: 0;
 	width: 40px;
-	height: 30px;
+	height: auto;
 	margin: auto 0;
 	font-size: 30px;
 	color: #cc9a9a;
 	margin-bottom: 11px;
 	transition: color 0.2s ease-out;
+	margin: auto 0;
 }
 
 .todo-list li .destroy:hover {
