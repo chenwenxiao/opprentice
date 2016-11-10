@@ -2,12 +2,11 @@
   <div id="app">
     <section class="todoapp">
       <header class="header">
-        <h1>tasks</h1>
+        <h1>Labs</h1>
         <input class="new-todo"
           autofocus autocomplete="off"
-          placeholder="What task needs to be found?"
-          v-model="newTodo"
-          @keyup.enter="addTodo">
+          placeholder="What lab needs to be found?"
+          v-model="filterTitle">
       </header>
       <section class="main" v-show="todos.length" v-cloak>
         <input class="toggle-all" type="checkbox" v-model="allDone">
@@ -18,11 +17,17 @@
             :class="{ completed: todo.completed, editing: todo == editedTodo }">
             <div class="view">
               <input class="toggle" type="checkbox" v-model="todo.completed">
-              <label @dblclick="editTodo(todo)">{{ todo.title }}</label>
-              <button class="destroy" @click="removeTodo(todo)"></button>
+              <label @dblclick="editTodo(todo)">
+                <span style="float: left" class="caption">{{ todo.title }}</span>
+                <el-tag style="float: right; margin-left: 5px" v-for="tag, tagIndex in todo.tags" :closable="true" type='success' :key='tag' :close-transitino='true' @close='closeTag(todo, tagIndex)'>
+                  {{tag}}
+                </el-tag>
+                <div style="clear:both;"></div>
+              </label>
+              <button class="destroy" @click="gotoDetail(todo)"><i class="el-icon-share"></i></button>
             </div>
             <input class="edit" type="text"
-              v-model="todo.title"
+              v-model="todo.tag"
               v-todo-focus="todo == editedTodo"
               @blur="doneEdit(todo)"
               @keyup.enter="doneEdit(todo)"
@@ -45,7 +50,7 @@
       </footer>
     </section>
     <footer class="info">
-      <p>Double-click to edit a todo</p>
+      <p>Double-click to edit a lab's tag</p>
       <p>Written by <a href="http://evanyou.me">Wenxiao Chen</a></p>
       <p>Part of <a href="http://todomvc.com">Opprentice</a></p>
     </footer>
@@ -57,53 +62,77 @@
 
   var STORAGE_KEY = 'todos-vuejs-2.0'
   var todoStorage = {
-    fetch: function () {
-      var todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      todos.forEach(function (todo, index) {
-        todo.id = index
-      })
-      todoStorage.uid = todos.length
-      return todos
+    fetch: function (app) {
+      return app.$http.get('/lab').then(function(res){
+        app.todos = JSON.parse(res.data);
+        todoStorage.uid = app.todos.length
+      }, function(res) {
+        app.todos = [{id : 0, title : 'shiro', completed: false, tags: ['latest'], path : 'shiro/latest'}, 
+                     {id : 1, title : 'shana', completed: false, tags: ['wonderful'], path : 'shiro/wonderful'}, 
+                     {id : 2, title : 'monoka', completed: false, tags: ['cnn'], path : 'shiro/cnn'}, 
+                     {id : 3, title : 'tiger', completed: false, tags: ['lstm'], path : 'shiro/lstm'}];
+        todoStorage.uid = app.todos.length
+      });
     },
+
     save: function (todos) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+      //localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
     }
   }
 
-  // visibility filters
   var filters = {
     all: function (todos) {
       return todos
     },
+
     active: function (todos) {
       return todos.filter(function (todo) {
         return !todo.completed
       })
     },
+
     completed: function (todos) {
       return todos.filter(function (todo) {
         return todo.completed
+      })
+    },
+
+    title: function(todos, search) {
+      var title = search.split(':')[0];
+      var tag = search.split(':')[1];
+      return todos.filter(function(todo) {
+        if (todo.title.indexOf(title) >= 0) {
+          if (tag) {
+            for (var t in todo.tags) {
+              if (todo.tags[t].indexOf(tag) >= 0)
+                return true
+            }
+          } else {
+            return true
+          }
+        }
+        return false
       })
     }
   }
 
   export default {
-  // app Vue instance
-    // app initial state
     data() {
       return {
-        todos: todoStorage.fetch(),
+        todos: [],
         newTodo: '',
         editedTodo: null,
-        visibility: 'all'
+        visibility: 'all',
+        filterTitle: ''
       }
     },
 
-    // watch todos change for localStorage persistence
+    mounted() {
+      todoStorage.fetch(this);
+    },
+
     watch: {
       '$route' (to, from) {
-        console.log(to);
-        console.log(from);
         var path = to.path.replace(/\//, '');
         if (filters[path]) {
           this.$set(this, 'visibility', path)
@@ -120,15 +149,16 @@
       }
     },
 
-    // computed properties
-    // http://vuejs.org/guide/computed.html
     computed: {
       filteredTodos: function () {
-        return filters[this.visibility](this.todos)
+        var todos = filters[this.visibility](this.todos);
+        return filters['title'](todos, this.filterTitle)
       },
+
       remaining: function () {
-        return filters.active(this.todos).length
+        return this.filteredTodos.length
       },
+
       allDone: {
         get: function () {
           return this.remaining === 0
@@ -143,32 +173,16 @@
 
     filters: {
       pluralize: function (n) {
-        return n === 1 ? 'item' : 'items'
+        return n === 1 ? 'lab' : 'labs'
       }
     },
 
-    // methods that implement data logic.
-    // note there's no DOM manipulation here at all.
     methods: {
-      addTodo: function () {
-        var value = this.newTodo && this.newTodo.trim()
-        if (!value) {
-          return
-        }
-        this.todos.push({
-          id: todoStorage.uid++,
-          title: value,
-          completed: false
-        })
-        this.newTodo = ''
-      },
-
-      removeTodo: function (todo) {
-        this.todos.splice(this.todos.indexOf(todo), 1)
+      gotoDetail: function (todo) {
+        window.open("/report?path=" + todo.path)
       },
 
       editTodo: function (todo) {
-        this.beforeEditCache = todo.title
         this.editedTodo = todo
       },
 
@@ -177,25 +191,26 @@
           return
         }
         this.editedTodo = null
-        todo.title = todo.title.trim()
-        if (!todo.title) {
-          this.removeTodo(todo)
+        if (todo.tag) {
+          todo.tag = todo.tag.trim()
+          todo.tags.push(todo.tag)
         }
       },
 
       cancelEdit: function (todo) {
         this.editedTodo = null
-        todo.title = this.beforeEditCache
       },
 
       removeCompleted: function () {
         this.todos = filters.active(this.todos)
+      },
+
+      closeTag: function(todo, index) {
+        if (index >=0 && index < todo.tags.length)
+          todo.tags.splice(index, 1)
       }
     },
 
-    // a custom directive to wait for the DOM to be updated
-    // before focusing on the input field.
-    // http://vuejs.org/guide/custom-directive.html
     directives: {
       'todo-focus': function (el, value) {
         if (value) {
