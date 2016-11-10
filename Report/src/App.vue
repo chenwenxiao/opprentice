@@ -19,8 +19,8 @@
               <input class="toggle" type="checkbox" v-model="todo.completed">
               <label @dblclick="editTodo(todo)">
                 <el-row>
-                  <el-col :span="8" class="caption">
-                    <div style="margin: auto 0">
+                  <el-col :span="8">
+                    <div style="margin: auto 0" class="caption">
                       <div style="font-size: 40px">{{todo.title}}</div>
                       <div style="font-size: 10px">{{todo.date}}</div>
                     </div>
