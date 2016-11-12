@@ -25,7 +25,6 @@
                       <div style="font-size: 10px">{{todo.date}}</div>
                     </div>
                   </el-col>
-
                   <el-col :span="16">
                     <div style="padding: 20px 0;">
                       <el-tag style="float: right; margin: auto 0 auto 5px;" v-for="tag, tagIndex in todo.tags" :closable="true" type='success' :key='tag' :close-transitino='true' @close='closeTag(todo, tagIndex)'>

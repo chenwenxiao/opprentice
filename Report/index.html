@@ -3,10 +3,17 @@
   <head>
     <meta charset="utf-8">
     <title>element-starter</title>
+    <link rel="stylesheet" type="text/css" href="particles.css" />
   </head>
   <body>
-    
+    <div id="particles"></div>
+    <script src="particles.js"></script>
     <div id="app"></div>
     <script src="dist/build.js"></script>
+    <script>
+      particlesJS.load('particles', 'particles.json', function() {
+        console.log('callback - particles.js config loaded');
+      });
+    </script>
   </body>
 </html>
