@@ -19,13 +19,13 @@
               <input class="toggle" type="checkbox" v-model="todo.completed">
               <label @dblclick="editTodo(todo)">
                 <el-row>
-                  <el-col :span="8">
+                  <el-col :span="16">
                     <div style="margin: auto 0" class="caption">
                       <div style="font-size: 40px">{{todo.title}}</div>
                       <div style="font-size: 10px">{{todo.date}}</div>
                     </div>
                   </el-col>
-                  <el-col :span="16">
+                  <el-col :span="8">
                     <div style="padding: 20px 0;">
                       <el-tag style="float: right; margin: auto 0 auto 5px;" v-for="tag, tagIndex in todo.tags" :closable="true" type='success' :key='tag' :close-transitino='true' @close='closeTag(todo, tagIndex)'>
                         {{tag}}
@@ -197,7 +197,7 @@
 
     methods: {
       gotoDetail: function (todo) {
-        window.open("/report?path=" + todo.path)
+        window.open(todo.path + "/report/report.html")
       },
 
       editTodo: function (todo) {
