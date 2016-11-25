@@ -13,8 +13,6 @@
   import jquery from 'jquery';
   import GlobalBar from './GlobalBar.vue';
 
-  // console.log(Highcharts.createElement);
-  console.log(theme)
 
   theme(Highcharts);
 
@@ -53,13 +51,17 @@
   
   var STORAGE_KEY = 'labels-vuejs-2.0'
   var labelStorage = {
-    fetch: function (app, start=0, size=0) {
-      if (size == 0) {
+    virtual_get: function(index) {
+      return [1258675200000 + index * 60000, Math.sin(index * 1.0 / 100)];
+    },
+
+    fetch: function (app, start=0, end=0) {
+      if (start == 0 && end == 0) {
         return app.$http.get('/label').then(function(res){
           var json = JSON.parse(res.data);
           app.labels = json.labels;
-          app.global_max = json.global_max;
-          app.global_min = json.global_min;
+          app.global_max = app.labels[app.labels.length - 1][0];
+          app.global_min = app.labels[0][0];
           app.globalType = utils.judgeExtremeType(app.global_min, app.global_max);
           if (app.globalType == 'month' || app.globalType == 'year') {
             app.window_max = app.global_min + _week;
@@ -69,9 +71,14 @@
             app.window_min = app.global_min;
           }
         }, function(res) {
+          //[start , end] close interval
           app.labels = [];
-          for (var i = 0; i < 100000; ++i)
-            app.labels.push([1258675200000 + i * 60000, Math.sin(i * 1.0 / 10)])
+          var n = 100000;
+          var step = Math.round(Math.max(1, n / 1000));
+          for (var i = 0; i < n; i += step)
+            app.labels.push(labelStorage.virtual_get(i));
+          app.labels.push(labelStorage.virtual_get(n));
+
           app.global_max = app.labels[app.labels.length - 1][0];
           app.global_min = app.labels[0][0];
           app.globalType = utils.judgeExtremeType(app.global_min, app.global_max);
@@ -84,12 +91,18 @@
           }
         });
       } else {
-        return app.$http.get('/label?start=' + start + '&size=' + size).then(function(res){
+        return app.$http.get('/label?start=' + start + '&end=' + end).then(function(res){
           app.labels = JSON.parse(res.data);
         }, function(res) {
+          console.log('Interval Init');
           app.labels = [];
-          for (var i = start; i < start + size; ++i)
-            app.labels.push([1258675200000 + i * 60000, Math.sin(i * 1.0 / 10)])
+          var istart = Math.round((start - 1258675200000) / 1000 / 60);
+          var iend = Math.round((end - 1258675200000) / 1000 / 60);
+          var step = Math.round(Math.max(1, (iend - istart) / 1000));
+          for (var i = istart; i < iend; i += step)
+            app.labels.push(labelStorage.virtual_get(i));
+          app.labels.push(labelStorage.virtual_get(iend));
+          console.log(app.labels);
         });
       }
     },
@@ -257,11 +270,26 @@
             events: {
               setExtremes: function(e) {
                 App.extremeType = utils.judgeExtremeType(e.min, e.max);
+              },
+              afterSetExtremes: function(e) {
+                console.log(this.chart)
+                // this.chart.showLoading('Loading data from server...');
+                labelStorage.fetch(App, Math.round(e.min), Math.round(e.max)).then(function() {
+                  console.log('Hide')
+                  App.chart.series[0].setData(App.labels);
+                  // App.chart.hideLoading();
+                });
               }
             }
           },
           scrollbar: {
             enabled: false
+          },            
+          navigator: {
+            adaptToUpdatedData: false,
+            series: {
+              data: App.labels
+            }
           },
           series: [{
               name: 'Normal',
@@ -270,6 +298,7 @@
               zones: []
           }]
         };
+        console.log('Chart init');
         this.chart = Highcharts.stockChart(container, option);
         
         //TODO calc the globalmax & globalmin
