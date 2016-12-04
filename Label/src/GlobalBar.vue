@@ -18,6 +18,10 @@
       this.$on('init', this.init);
     },
     methods: {
+      destroy() {
+        this.parallax.destroy();
+      },
+
       init(global_max, global_min, window_max, window_min) {
         this.global_max = global_max;
         this.global_min = global_min;

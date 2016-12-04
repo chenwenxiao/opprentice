@@ -174,7 +174,8 @@ module.exports = function(Highcharts) {
                             color: 'white'
                         }
                     }
-                }
+                },
+                width: 50
             },
             inputBoxBorderColor: '#505053',
             inputStyle: {
