@@ -1,38 +1,43 @@
 <template>
-  <div>
-    <div id="container" style="width:100%; height:960px;"></div>
-    <globalbar ref="globalbar"
-              @update="update"/>
+  <div class="container" :class="{'show-menu': show_menu}">
+    <optionmenu @toggleContainer="toggleContainer" @updateOption="updateOption" ref="menu"></optionmenu>
 
-    <el-dialog title="数据列表" v-model="series.visible" size="tiny">
-      <el-form :model="series">
-        <el-form-item v-for="(name, index) in series.names" :label="'数据' + index" label-width="60px">
-          <el-col :span="10">
-            <el-autocomplete
-              class="inline-input"
-              v-model="series.names[index]"
-              :fetch-suggestions="querySearch"
-              placeholder="请输入数据名称"
-              :trigger-on-focus="false">
-            </el-autocomplete>
-          </el-col>
-          <el-col :span="8">
-            <el-input
-              placeholder="请输入偏移量"
-              v-model="series.shifts[index]">
-            </el-input>
-          </el-col>
-          <el-col :span="4">
-            <el-button @click.prevent="removeSeries(index)">删除</el-button>
-          </el-col>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="cancelSeries">取 消</el-button>
-        <el-button @click="addSeries">新增数据</el-button>
-        <el-button type="primary" @click="confirmSeries">确 定</el-button>
+    <div class="content-wrap" @click="toggleContent">
+      <div class="content">
+        <div id="container" style="width:100%;"></div>
+        <globalbar ref="globalbar"
+                   @update="update"/>
+        <el-dialog title="数据列表" v-model="series.visible" size="tiny">
+          <el-form :model="series">
+            <el-form-item v-for="(name, index) in series.names" :label="'数据' + index" label-width="60px">
+              <el-col :span="8">
+                <el-autocomplete
+                        class="inline-input"
+                        v-model="series.names[index]"
+                        :fetch-suggestions="querySearch"
+                        placeholder="请输入数据名称"
+                        :trigger-on-focus="false">
+                </el-autocomplete>
+              </el-col>
+              <el-col :span="8">
+                <el-input
+                        placeholder="请输入偏移量"
+                        v-model="series.shifts[index]">
+                </el-input>
+              </el-col>
+              <el-col :span="4">
+                <el-button @click.prevent="removeSeries(index)">删除</el-button>
+              </el-col>
+            </el-form-item>
+          </el-form>
+          <div slot="footer" class="dialog-footer">
+            <el-button @click="cancelSeries">取 消</el-button>
+            <el-button @click="addSeries">新增数据</el-button>
+            <el-button type="primary" @click="confirmSeries">确 定</el-button>
+          </div>
+        </el-dialog>
       </div>
-    </el-dialog>
+    </div>
   </div>
 
 </template>
@@ -40,9 +45,9 @@
 <script>
   import Highcharts from 'highcharts/highstock';
   import theme from './theme.js'
-  // import theme from 'highcharts/themes/dark-unica';
   import jquery from 'jquery';
   import GlobalBar from './GlobalBar.vue';
+  import Menu from './Menu.vue';
 
   theme(Highcharts);
 
@@ -52,17 +57,17 @@
   var _week = 1000 * 60 * 60 * 24 * 7;
   var _month = 1000 * 60 * 60 * 24 * 30;
   var _year = 1000 * 60 * 60 * 24 * 365;
-  
+
   var marks = {};
   marks['sin'] = [];
   marks['cos'] = [];
   var STORAGE_KEY = 'labels-vuejs-2.0'
   var labelStorage = {
-
-    getNames: function(App) {
-      return App.$http.get('/name').then(function(res) {
-        return res.data;
-      }, function(res) {
+    rem: {},
+    getNames: function (App) {
+      return App.$http.get('/name').then(function (res) {
+        return JSON.parse(res.data);
+      }, function (res) {
         return [{
           value: 'sin'
         }, {
@@ -71,11 +76,12 @@
       });
     },
 
-    virtual_get: function(name, index) {
+    virtual_get: function (name, index) {
       var flag = 0;
       for (var i = 0; i < marks[name].length; ++i)
-        if (marks[name][i][0] <= index && index <= marks[name][i][1])
-          flag = !flag;
+        if (marks[name][i][0] <= index && index <= marks[name][i][1]) {
+          flag = marks[name][i][2];
+        }
       var y = 0;
       if (name == 'sin')
         y = Math.sin(index * 1.0 / 6000000);
@@ -84,20 +90,21 @@
       return [index, y, flag];
     },
 
-    fetch: function (App, start=0, end=0, strict=false) {
-      console.log('fetch(' + start + ',' + end + ')');
+    fetch: function (App, start = 0, end = 0, strict = false) {
       var LS = this;
       var pros = [];
       if (start == 0 && end == 0) {
-        console.log(App.names)
         for (var i = 0; i < App.names.length; ++i) {
-          pros.push((function(i) {
-            return App.$http.get('/label?name=' + App.names[i] + '&shift=' + App.shifts[i]).then(function(res) {
+          pros.push((function (i) {
+            return App.$http.get('/label?name=' + App.names[i] + '&shift=' + App.shifts[i] + '&num=' + App.names.length).then(function (res) {
               var json = JSON.parse(res.data);
+              console.log(json);
               App.labels[i] = json.labels;
+              App.steps[i] = json.step;
               if (i == 0) {
-                App.global_max = App.labels[App.labels.length - 1][0];
-                App.global_min = App.labels[0][0];
+                App.global_max = json.global_max;
+                App.global_min = json.global_min;
+                console.log(App.global_max, App.global_min);
                 App.globalType = utils.judgeExtremeType(App.global_min, App.global_max);
                 if (App.globalType == 'month' || App.globalType == 'year') {
                   App.window_max = App.global_min + _week;
@@ -107,14 +114,23 @@
                   App.window_min = App.global_min;
                 }
               }
-              return App.labels[i];
-            }, function(res) {
+              return false;
+            }, function (res) {
+              if (App.option.message)
+                App.$message({
+                  showClose: true,
+                  message: '数据获取失败，切换到临时数据',
+                  type: 'error'
+                });
               App.labels[i] = [];
               var labels = App.labels[i];
+              if (i == 0) App.steps[i] = 40 * 1000;
+              else App.steps[i] = 60 * 1000;
 
+              console.log(App.steps);
               var start = 1258675200000;
               var end = 1258675200000 + 100000 * 60 * 1000;
-              var step = utils.judgeStep(end - start, App.names.length);
+              var step = utils.judgeStep(App.steps[i], end - start, App.names.length, true);
 
               var istart = Math.round(start / step) * step;
               var iend = Math.round(end / step) * step;
@@ -135,88 +151,107 @@
                   App.window_min = App.global_min;
                 }
               }
-              console.log(App.window_max, App.window_min, App.global_max, App.global_min)
-              return labels;
+              return false;
             });
           })(i));
         }
       } else {
-        console.log('Interval Init');
+        //App.chart.showLoading('Loading data from server...');
+        for (var i = 0; i < App.names.length; ++i) {
+          pros.push((function (i) {
+            var step = utils.judgeStep(App.steps[i], end - start, App.names.length);
+            var exstart = Math.max(App.global_min, start - 500 * step);
+            var exend = Math.min(App.global_max, end + 500 * step);
 
-        App.reset = true;
-        var step = utils.judgeStep(end - start, App.names.length);
-        var exstart = Math.max(App.global_min, start - 500 * step);
-        var exend = Math.min(App.global_max, end + 500 * step);
+            var drstart = Math.max(App.global_min, start - 300 * step);
+            var drend = Math.min(App.global_max, end + 300 * step);
 
-        var drstart = Math.max(App.global_min, start - 300 * step);
-        var drend = Math.min(App.global_max, end + 300 * step);
+            var istart = Math.round(drstart / step) * step;
+            var iend = Math.round(drend / step) * step;
+            console.log(istart, iend, step);
+            console.log(LS.rem[i]);
 
-        var istart = Math.round(drstart / step) * step;
-        var iend = Math.round(drend / step) * step;
-        if (LS.step == step && LS.istart <= istart && LS.iend >= iend && !strict) {
-          return Promise.resolve(false);
-        } else {
-          App.labels = [];
-          for (var i = 0; i < App.names.length; ++i)
-            App.labels.push([]);
-          istart = Math.round(exstart / step) * step;
-          iend = Math.round(exend / step) * step;
-          LS.istart = istart, LS.iend = iend;
-          LS.step = step;
-
-          //App.chart.showLoading('Loading data from server...');
-          for (var i = 0; i < App.names.length; ++i)
-            pros.push((function(i, istart, iend) {
-              return App.$http.get('/label?name=' + App.names[i] + '&start=' + start + '&end=' + end + '&shift=' + App.shifts[i]).then(function(res) {
-                App.labels[i] = JSON.parse(res.data);
-                return App.labels[i];
-              }, function(res) {
-                console.log('Get Data');
+            var lazy = false;
+            if (LS.rem[i])
+              lazy = LS.rem[i].step == step && LS.rem[i].istart <= istart && LS.rem[i].iend >= iend;
+            if (lazy && !strict) {
+              return Promise.resolve(true);
+            } else {
+              istart = Math.round(exstart / step) * step;
+              iend = Math.round(exend / step) * step;
+              LS.rem[i] = {
+                istart: istart,
+                iend: iend,
+                step: step
+              };
+              return App.$http.get('/label?name=' + App.names[i] + '&start=' + exstart + '&end=' + exend + '&shift=' + App.shifts[i] + '&num=' + App.names.length).then(function (res) {
+                App.labels[i] = JSON.parse(res.data).labels;
+                return lazy;
+              }, function (res) {
+                if (App.option.message)
+                  App.$message({
+                    showClose: true,
+                    message: '数据获取失败，切换到临时数据',
+                    type: 'error'
+                  });
+                App.labels[i] = [];
                 for (var j = istart; j <= iend; j += step) {
                   var tmp = labelStorage.virtual_get(App.names[i], j - parseInt(App.shifts[i]));
                   tmp[0] += parseInt(App.shifts[i]);
                   App.labels[i].push(tmp);
                 }
-                return App.labels[i];
+                return lazy;
               });
-            })(i, istart, iend));
+            }
+          })(i));
         }
       }
-      return Promise.all(pros).then(function() {
-        return true;
+      return Promise.all(pros).then(function (res) {
+        console.log('fetch all', res);
+        var ans = true;
+        for (var i = 0; i < res.length; ++i)
+          ans = ans && res[i];
+        return ans;
       });
     },
 
-    reload: function(App, chart, start, end, strict=false) {
-      return labelStorage.fetch(App, start, end, strict).then(function(res) {
-        console.log('Hide')
-        if (res) {
+    reload: function (App, chart, start, end, strict = false) {
+      return labelStorage.fetch(App, start, end, strict).then(function (res) {
+        if (strict || !res) {
+          console.log(res);
           console.log(App.labels);
-          console.log(App.chart.series)
-          for (var i = 0; i < App.labels.length; ++i)
-            chart.series[i].setData(App.labels[i]);
+          if (!res)
+            for (var i = 0; i < App.labels.length; ++i)
+              chart.series[i].setData(App.labels[i]);
           // chart.hideLoading();
           for (var i = 0; i < App.labels.length; ++i) {
-            chart.series[i].zones = utils.judgeZones(App.labels[i], chart.series[i].color);
+            var zones = utils.judgeZones(App.labels[i], chart.series[i].color, chart.series[i].zones);
+            chart.series[i].zones = zones;
             chart.series[i].show();
           }
-          console.log('Finish Reload')
+          // chart.redraw();
         }
       });
     },
 
-    save: function (App, name, start, end) {
-      return App.$http.post('/mark?name=' + name + 'start=' + start + '&end=' + end).then(function(res) {
-        for (var i = 0; i < App.labels.length; ++i)
-          if (start <= App.labels[i][0] && App.labels[i][0] <= end)
-            App.labels[i][2] = !App.labels[i][2];
-        return App.labels;
-      }, function(res) {
-        marks[name].push([start, end]);
-        for (var i = 0; i < App.labels.length; ++i)
-          if (start <= App.labels[i][0] && App.labels[i][0] <= end)
-            App.labels[i][2] = !App.labels[i][2];
-        return App.labels;
+    save: function (App, name, start, end, op) {
+      return App.$http.post('/mark?name=' + name + '&start=' + start + '&end=' + end + '&op=' + op).then(function (res) {
+        if (App.option.message)
+          App.$message({
+            showClose: true,
+            message: '数据[' + start + ',' + end + ']获标记成功',
+            type: 'success'
+          });
+
+      }, function (res) {
+        if (App.option.message)
+          App.$message({
+            showClose: true,
+            message: '数据获标记失败',
+            type: 'error'
+          });
+
+        marks[name].push([start, end, op]);
       })
     }
   }
@@ -226,13 +261,13 @@
       return labels
     },
 
-    positive: function(labels) {
+    positive: function (labels) {
       return labels.filter(function (labels) {
         return labels.label == true
       })
     },
-    
-    unpositive: function(labels) {
+
+    unpositive: function (labels) {
       return labels.filter(function (labels) {
         return labels.label == false
       })
@@ -246,7 +281,7 @@
   }
 
   var utils = {
-    judgeZones: function(labels, defaultColor) {
+    judgeZones: function (labels, defaultColor, oldZones) {
       var zones = [];
       var last = 0;
       for (var i = 0; i < labels.length; ++i) {
@@ -259,11 +294,13 @@
         }
       }
       zones.push({color: defaultColor});
+      while (zones.length < oldZones.length)
+        zones.push({color: defaultColor});
       console.log(zones)
       return zones;
     },
 
-    binarySearch: function(data, dest) {
+    binarySearch: function (data, dest) {
       //find the smallest index in data whose value is large than dest
       var h = data.length - 1, l = 0;
       if (dest > data[h])
@@ -278,7 +315,7 @@
       }
       return l;
     },
-    judgeExtremeType: function(min, max) {
+    judgeExtremeType: function (min, max) {
       //judge the extrme type, including day, week, month. year
       var size = max - min;
       if (size <= _day)
@@ -290,9 +327,10 @@
       else
         return 'year';
     },
-    judgeStep: function(size, nums) {
-      var step = 1000 * 60;
-      while (size / step > 2000) {
+    judgeStep: function (unit, size, nums, global = false) {
+      var step = unit;
+      if (global) nums = 1;
+      while (size / step * nums > 1000) {
         step = step * 2;
       }
       return step;
@@ -317,7 +355,13 @@
           names: [],
           shifts: []
         },
-        chart: null
+        chart: null,
+        show_menu: false,
+        option: {
+          label: true,
+          scale: false,
+          message: false
+        }
       }
     },
 
@@ -325,7 +369,8 @@
       var App = this;
       App.names = window.names;
       App.shifts = window.shifts;
-      labelStorage.getNames(App).then(function(names) {
+      App.steps = {};
+      labelStorage.getNames(App).then(function (names) {
         App.allNames = names;
       });
       this.init();
@@ -337,66 +382,71 @@
       },
     },
 
-    computed: {
+    computed: {},
 
-    },
-
-    filters: {
-
-    },
+    filters: {},
 
     methods: {
-      init: function() {
+      init: function () {
         var App = this;
         App.labels = [];
+        App.steps = {};
         for (var i = 0; i < App.names.length; ++i)
           App.labels.push([]);
-        labelStorage.fetch(App).then(function() {
+        labelStorage.fetch(App).then(function () {
           var container = jquery('#container')[0];
           var pre_series = [];
-          console.log(App.labels)
           for (var i = 0; i < App.labels.length; ++i)
             pre_series.push({
-                name: App.names[i],
-                data: App.labels[i], 
-                zoneAxis: 'x',
-                zones: [],
-                showInNavigator: true
+              lineWidth: i == 0 ? 2 : 0.5,
+              name: App.names[i] + (App.shifts[i] != 0 ? '\'s ' + App.shifts[i] : ''),
+              data: App.labels[i],
+              zoneAxis: 'x',
+              zones: [{
+                color: Highcharts.theme.colors[i % Highcharts.theme.colors.length]
+              }],
+              showInNavigator: App.global_min <= App.labels[i][App.labels[i].length - 1][0] &&
+                               App.global_max >= App.labels[i][0][0]
             });
-          console.log(pre_series);
           var option = {
             chart: {
               type: 'spline',
               zoomType: 'x',
               events: {
-                load: function() {
-                  this.xAxis[0].setExtremes(App.window_min, App.window_max);        
+                load: function () {
+                  this.xAxis[0].setExtremes(App.window_min, App.window_max);
                   this.xAxis[0].update({
-                      min: App.window_min,
-                      max: App.window_max
+                    min: App.window_min,
+                    max: App.window_max
                   });
                 },
-                selection: function(e) {
-                  if (e.xAxis) {
-                    console.log(App.extremeType)
-                    if (App.extremeType == 'day') {
-                      labelStorage.save(App, App.names[0], e.xAxis[0].min, e.xAxis[0].max).then(function(res) {
-                        labelStorage.reload(App, App.chart, Math.round(App.chart.xAxis[0].min), Math.round(App.chart.xAxis[0].max), true);
-                      });
-                    } else {
-
+                selection: function (e) {
+                  if (!App.option.scale)
+                    if (e.xAxis) {
+                      if (App.extremeType == 'day') {
+                        labelStorage.save(App, App.names[0], e.xAxis[0].min, e.xAxis[0].max, App.option.label).then(function (res) {
+                          labelStorage.reload(App, App.chart, Math.round(App.chart.xAxis[0].min), Math.round(App.chart.xAxis[0].max), true);
+                        });
+                      } else {
+                        if (App.option.message)
+                          App.$message({
+                            showClose: true,
+                            message: '标记时必须缩放到一天以内',
+                            type: 'warning'
+                          });
+                      }
                     }
-                  }
-                  return false;
+                  console.log(App.option.scale);
+                  return App.option.scale;
                 }
               }
             },
             legend: {
               enabled: true,
               itemStyle: {
-                  fontSize: '1em',
-                  fontStyle: 'normal',
-                  fontWeight: 'bold'
+                fontSize: '1em',
+                fontStyle: 'normal',
+                fontWeight: 'bold'
               },
               symbolRadius: 0,
               symbolWidth: 16
@@ -423,28 +473,36 @@
                 type: '',
                 count: 1,
                 text: 'D&S',
-                click: function() {
-                  console.log(App.chart.series);
+                click: function () {
                   if (App.chart.options.chart.zoomType == 'x') {
                     App.chart.update({
                       chart: {
                         zoomType: undefined
                       }
                     });
+                    if (App.option.message)
+                      App.$message({
+                        showClose: true,
+                        message: '切换到拖动模式'
+                      });
                   } else {
                     App.chart.update({
                       chart: {
                         zoomType: 'x'
                       }
                     });
+                    if (App.option.message)
+                      App.$message({
+                        showClose: true,
+                        message: '切换到选择模式'
+                      });
                   }
                 }
               }, {
                 type: '',
                 count: 1,
                 text: 'Series',
-                click: function() {
-                  console.log('show series');
+                click: function () {
                   App.series.names = [];
                   App.series.shifts = [];
                   for (var i = 0; i < App.names.length; ++i) {
@@ -453,97 +511,133 @@
                   }
                   App.series.visible = true;
                 }
+              }, {
+                type: '',
+                count: 1,
+                text: 'Option',
+                click: function () {
+                  App.toggleMenu();
+                }
               }]
             },
             xAxis: {
               //minRange: 1000 * 60 * 60,
               events: {
-                setExtremes: function(e) {
+                setExtremes: function (e) {
                   App.extremeType = utils.judgeExtremeType(e.min, e.max);
                 },
-                afterSetExtremes: function(e) {
-                  console.log('afterSetExtremes')
+                afterSetExtremes: function (e) {
                   labelStorage.reload(App, this, Math.round(e.min), Math.round(e.max))
                 }
               }
             },
             yAxis: {
+              // max: 1.0,
+              // min: -1.0
             },
             scrollbar: {
               enabled: false
-            },            
+            },
             navigator: {
               adaptToUpdatedData: false
             },
             series: pre_series
           };
           App.chart = Highcharts.stockChart(container, option);
-
+          var autosize = function() {
+            App.chart.setSize(Math.max(100, jquery(window).width()), Math.max(100, jquery(window).height() - 20),false);
+          };
+          jquery(window).resize(autosize);
+          autosize();
           var c = App.chart.rangeSelector.buttons, d = App.chart.options.rangeSelector.buttons;
+
           function bindEvents(b, c) {
             if (c.click) {
               b.on("click", c.click);
             }
           }
+
           if (c && d) {
-            console.log(c, d);
             for (var i = 0; i < c.length; i++) {
               if (d[i]) bindEvents(c[i], d[i]);
             }
           }
-          console.log('Chart init finish');
           App.$refs.globalbar.$emit('init', App.global_max, App.global_min, App.window_max, App.window_min);
         });
       },
-      destroy: function() {
+      destroy: function () {
         this.$refs.globalbar.$emit('destroy');
         this.chart.destroy();
-        labelStorage.step = null;
+        labelStorage.rem = {};
 
       },
-      update: function(window_min, window_max) {
+      update: function (window_min, window_max) {
         this.chart.xAxis[1].update({
-            min: window_min,
-            max: window_max
+          min: window_min,
+          max: window_max
         });
-      }, 
-      querySearch: function(name, cb) {
+      },
+      querySearch: function (name, cb) {
         var result = name ? this.allNames.filter((state) => {
           return (state.value.indexOf(name.toLowerCase()) === 0);
         }) : this.allNames;
         cb(result);
       },
-      removeSeries: function(index) {
+      removeSeries: function (index) {
         this.series.names.splice(index, 1);
         this.series.shifts.splice(index, 1);
       },
-      addSeries: function() {
+      addSeries: function () {
         this.series.names.push('');
         this.series.shifts.push('');
       },
-      confirmSeries: function() {
+      confirmSeries: function () {
         this.names = this.series.names;
         this.shifts = this.series.shifts;
         this.series.visible = false;
+        if (this.option.message)
+          this.$message({
+            showClose: true,
+            message: '正在加载新视图...',
+            type: 'success'
+          });
         this.destroy();
         this.init();
       },
-      cancelSeries: function() {
+      cancelSeries: function () {
         this.series.visible = false;
+      },
+      toggleContainer: function (show_menu) {
+        console.log(show_menu);
+        this.show_menu = show_menu;
+      },
+      toggleContent: function (e) {
+        console.log('toggleContent');
+        if (this.show_menu)
+          this.$refs.menu.$emit('toggleMenu');
+      },
+      toggleMenu: function (e) {
+        console.log('toggleMenu');
+        this.$refs.menu.$emit('toggleMenu');
+      },
+      updateOption: function (option) {
+        console.log('updateOption');
+        this.option = option;
       }
     },
 
-    directives: {
-
-    },
+    directives: {},
 
     components: {
-      globalbar: GlobalBar
+      globalbar: GlobalBar,
+      optionmenu: Menu
     }
   }
 
 </script>
 
 <style>
-
+  @import "./css/menu_bubble.css";
+  @import "./css/normalize.css";
+  @import "./fonts/font-awesome-4.2.0/css/font-awesome.min.css";
 </style>

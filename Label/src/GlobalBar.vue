@@ -16,6 +16,7 @@
     },
     created() {
       this.$on('init', this.init);
+      this.$on('destroy', this.destroy);
     },
     methods: {
       destroy() {
@@ -85,7 +86,7 @@
 /* Scrollbar */
 .scrollbar {
 	margin: 0 0 1em 0;
-	height: 5px;
+	height: 3px;
 	background: #ccc;
 	line-height: 0;
 }
