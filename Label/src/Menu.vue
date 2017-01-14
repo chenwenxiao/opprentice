@@ -23,6 +23,7 @@
 
 <script>
   import jquery from 'jquery';
+  import Snap from 'snapsvg-cjs';
   export default {
     data() {
       return {

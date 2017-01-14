@@ -7,10 +7,19 @@
         <div id="container" style="width:100%;"></div>
         <globalbar ref="globalbar"
                    @update="update"/>
-        <el-dialog title="数据列表" v-model="series.visible" size="tiny">
+        <el-dialog title="上传数据" v-model="upload.visible" size="none">
+          <el-upload action="upload" type="drag" :multiple="true">
+            <i class="el-icon-upload"></i>
+            <div class="el-dragger__text">将文件拖到此处，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">只能上传csv文件，大小不限</div>
+          </el-upload>
+        </el-dialog>
+
+        </uploadcsv>
+        <el-dialog title="数据列表" v-model="series.visible" size="none">
           <el-form :model="series">
-            <el-form-item v-for="(name, index) in series.names" :label="'数据' + index" label-width="60px">
-              <el-col :span="8">
+            <el-form-item v-for="(name, index) in series.names" :label="'数据' + index" label-width="80px">
+              <el-col :span="13">
                 <el-autocomplete
                         class="inline-input"
                         v-model="series.names[index]"
@@ -19,7 +28,7 @@
                         :trigger-on-focus="false">
                 </el-autocomplete>
               </el-col>
-              <el-col :span="8">
+              <el-col :span="7">
                 <el-input
                         placeholder="请输入偏移量"
                         v-model="series.shifts[index]">
@@ -225,7 +234,7 @@
               chart.series[i].setData(App.labels[i]);
           // chart.hideLoading();
           for (var i = 0; i < App.labels.length; ++i) {
-            var zones = utils.judgeZones(App.labels[i], chart.series[i].color, chart.series[i].zones);
+            var zones = utils.judgeZones(App.labels[i], chart.series[i].color, chart.series[i].zones, App.steps[i]);
             chart.series[i].zones = zones;
             chart.series[i].show();
           }
@@ -281,19 +290,20 @@
   }
 
   var utils = {
-    judgeZones: function (labels, defaultColor, oldZones) {
+    judgeZones: function (labels, defaultColor, oldZones, unitStep) {
+      console.log(labels);
       var zones = [];
       var last = 0;
       for (var i = 0; i < labels.length; ++i) {
         if (labels[i][2] != last) {
           zones.push({
-            value: labels[i][0] - 30 * 1000,
+            value: labels[i][0] - unitStep / 2,
             color: last > 0 ? '#f45b5b' : defaultColor
           });
           last = labels[i][2];
         }
       }
-      zones.push({color: defaultColor});
+      zones.push({color: last > 0 ? '#f45b5b' : defaultColor});
       while (zones.length < oldZones.length)
         zones.push({color: defaultColor});
       console.log(zones)
@@ -354,6 +364,9 @@
           visible: false,
           names: [],
           shifts: []
+        },
+        upload: {
+          visible: false
         },
         chart: null,
         show_menu: false,
@@ -503,13 +516,23 @@
                 count: 1,
                 text: 'Series',
                 click: function () {
-                  App.series.names = [];
-                  App.series.shifts = [];
-                  for (var i = 0; i < App.names.length; ++i) {
-                    App.series.names.push(App.names[i]);
-                    App.series.shifts.push(App.shifts[i]);
-                  }
-                  App.series.visible = true;
+                  labelStorage.getNames(App).then(function (names) {
+                    App.allNames = names;
+                    App.series.names = [];
+                    App.series.shifts = [];
+                    for (var i = 0; i < App.names.length; ++i) {
+                      App.series.names.push(App.names[i]);
+                      App.series.shifts.push(App.shifts[i]);
+                    }
+                    App.series.visible = true;
+                  });
+                }
+              }, {
+                type: '',
+                count: 1,
+                text: 'Upload',
+                click: function () {
+                  App.upload.visible = true;
                 }
               }, {
                 type: '',
@@ -594,6 +617,10 @@
       confirmSeries: function () {
         this.names = this.series.names;
         this.shifts = this.series.shifts;
+        for (var i in this.names)
+          if (!this.names[i]) this.names[i] = "";
+        for (var i in this.shifts)
+          if (!this.shifts[i]) this.shifts[i] = 0;
         this.series.visible = false;
         if (this.option.message)
           this.$message({
@@ -639,5 +666,5 @@
 <style>
   @import "./css/menu_bubble.css";
   @import "./css/normalize.css";
-  @import "./fonts/font-awesome-4.2.0/css/font-awesome.min.css";
+  @import "./fonts/font-awesome-4.7.0/css/font-awesome.min.css";
 </style>
