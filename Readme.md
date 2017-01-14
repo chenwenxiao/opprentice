@@ -55,7 +55,7 @@ module.exports = {
     host: 'localhost',
     user: 'root',
     password: 'Your password',
-    database: 'Your database\'s name'
+    database: 'Your database's name'
   }
 };
 ```

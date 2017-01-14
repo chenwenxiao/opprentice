@@ -63,7 +63,7 @@ class MysqlCollection extends Collection {
         console.log(rows);
         let labels = [];
         for (let i = 0; i < rows.length; ++i)
-          labels.push([(parseInt(rows[i].timestamp) + shift) * 1000, parseFloat(rows[i].value), rows[i].label == null ? 0 : (rows[i].label] ? 0 : 1));
+          labels.push([(parseInt(rows[i].timestamp) + shift) * 1000, parseFloat(rows[i].value), rows[i].label == null ? 0 : (rows[i].label ? 1 : 0)]);
         resolve(labels);
       });
     });

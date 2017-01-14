@@ -71,7 +71,7 @@ class MongoCollection extends Collection {
         // but the unit of the timestamp is 1 millisecond in frontend.
         let labels = [];
         for (let i = 0; i < items.length; ++i)
-          labels.push([(parseInt(items[i].timestamp) + shift) * 1000, parseFloat(rows[i].value), rows[i].label == null ? 0 : (rows[i].label] ? 0 : 1));
+          labels.push([(parseInt(items[i].timestamp) + shift) * 1000, parseFloat(items[i].value), items[i].label == null ? 0 : (items[i].label ? 1 : 0)]);
         resolve(labels);
       });
     });
